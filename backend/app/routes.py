@@ -33,3 +33,16 @@ def track_price(data: schemas.PriceTrackRequest, db: Session = Depends(get_db)):
         "product_id": data.product_id,
         "price": data.price
     }
+@router.get("/price-history/{product_id}")
+def get_price_history(product_id: str, db: Session = Depends(get_db)):
+    history = db.query(models.PriceHistory).filter(
+        models.PriceHistory.product_id == product_id
+    ).order_by(models.PriceHistory.timestamp.asc()).all()
+
+    return [
+        {
+            "price": record.price,
+            "timestamp": record.timestamp
+        }
+        for record in history
+    ]
