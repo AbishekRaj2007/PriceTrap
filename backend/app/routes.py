@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from .database import get_db
 from . import models, schemas
+from .utils import detect_fake_discount
 
 router = APIRouter()
 
@@ -46,3 +47,23 @@ def get_price_history(product_id: str, db: Session = Depends(get_db)):
         }
         for record in history
     ]
+
+@router.get("/discount-status/{product_id}")
+def discount_status(product_id: str, db: Session = Depends(get_db)):
+    history = db.query(models.PriceHistory).filter(
+        models.PriceHistory.product_id == product_id
+    ).order_by(models.PriceHistory.timestamp.desc()).all()
+
+    if not history:
+        return {"error": "No price data found"}
+
+    prices = [record.price for record in history]
+    current_price = prices[0]
+
+    result = detect_fake_discount(prices, current_price)
+
+    return {
+        "product_id": product_id,
+        "current_price": current_price,
+        "analysis": result
+    }
